@@ -1,14 +1,14 @@
 COMMON_CFLAGS=		-Wall -Wextra -std=c99 -pedantic
-CFLAGS+=		`pkg-config --cflags sdl2` $(COMMON_CFLAGS)
+CFLAGS+=		`pkg-config --cflags sdl3` $(if $(PENGER),-DPENGER) $(COMMON_CFLAGS)
 COMMON_LIBS=		-lm
-LIBS=			`pkg-config --libs sdl2` $(COMMON_LIBS)
+LIBS=			`pkg-config --libs sdl3` $(COMMON_LIBS)
 PREFIX?=		/usr/local
 INSTALL?=		install
 
 .PHONY: all
 all: Makefile sowon man
 
-sowon: main.c digits.h penger_walk_sheet.h
+sowon: main.c digits.h $(if $(PENGER),penger_walk_sheet.h)
 	$(CC) $(CFLAGS) -o sowon main.c $(LIBS)
 
 digits.h: png2c digits.png

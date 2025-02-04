@@ -4,8 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "./digits.h"
 
@@ -38,9 +39,9 @@
 #define PENGER_SCALE 4
 #define PENGER_STEPS_PER_SECOND 3
 
-void secc(int code)
+void secc(bool code)
 {
-    if (code < 0) {
+    if (!code) {
         fprintf(stderr, "SDL pooped itself: %s\n", SDL_GetError());
         abort();
     }
@@ -59,16 +60,12 @@ void *secp(void *ptr)
 SDL_Surface *load_png_file_as_surface(uint32_t *data, size_t width, size_t height)
 {
     SDL_Surface* image_surface =
-        secp(SDL_CreateRGBSurfaceFrom(
-                 data,
+        secp(SDL_CreateSurfaceFrom(
                  (int) width,
                  (int) height,
-                 32,
-                 (int) width * 4,
-                 0x000000FF,
-                 0x0000FF00,
-                 0x00FF0000,
-                 0xFF000000));
+                 SDL_PIXELFORMAT_ABGR8888,
+                 data,
+                 (int) width * 4));
     return image_surface;
 }
 
@@ -87,29 +84,29 @@ SDL_Texture *load_penger_png_file_as_texture(SDL_Renderer *renderer)
 #endif
 
 void render_digit_at(SDL_Renderer *renderer, SDL_Texture *digits, size_t digit_index,
-                     size_t wiggle_index, int *pen_x, int *pen_y, float user_scale, float fit_scale)
+                     size_t wiggle_index, float *pen_x, float *pen_y, float user_scale, float fit_scale)
 {
-    const int effective_digit_width = (int) floorf((float) CHAR_WIDTH * user_scale * fit_scale);
-    const int effective_digit_height = (int) floorf((float) CHAR_HEIGHT * user_scale * fit_scale);
+    const float effective_digit_width = (float) CHAR_WIDTH * user_scale * fit_scale;
+    const float effective_digit_height = (float) CHAR_HEIGHT * user_scale * fit_scale;
 
-    const SDL_Rect src_rect = {
-        (int) (digit_index * SPRITE_CHAR_WIDTH),
-        (int) (wiggle_index * SPRITE_CHAR_HEIGHT),
+    const SDL_FRect src_rect = {
+        (float) digit_index * SPRITE_CHAR_WIDTH,
+        (float) wiggle_index * SPRITE_CHAR_HEIGHT,
         SPRITE_CHAR_WIDTH,
         SPRITE_CHAR_HEIGHT
     };
-    const SDL_Rect dst_rect = {
+    const SDL_FRect dst_rect = {
         *pen_x,
         *pen_y,
         effective_digit_width,
         effective_digit_height
     };
-    SDL_RenderCopy(renderer, digits, &src_rect, &dst_rect);
+    SDL_RenderTexture(renderer, digits, &src_rect, &dst_rect);
     *pen_x += effective_digit_width;
 }
 
 #ifdef PENGER
-void render_penger_at(SDL_Renderer *renderer, SDL_Texture *penger, float time, int flipped, SDL_Window *window)
+void render_penger_at(SDL_Renderer *renderer, SDL_Texture *penger, float time, bool flipped, SDL_Window *window)
 {
     int window_width, window_height;
     SDL_GetWindowSize(window, &window_width, &window_height);
@@ -118,7 +115,7 @@ void render_penger_at(SDL_Renderer *renderer, SDL_Texture *penger, float time, i
     
     int step = (int)(time*sps)%(60*sps); //step index [0,60*sps-1]
 
-    float progress  = step/(60.0*sps); // [0,1]
+    float progress  = step/(60.0f*sps); // [0,1]
     
     int frame_index = step%2;
 
@@ -126,25 +123,25 @@ void render_penger_at(SDL_Renderer *renderer, SDL_Texture *penger, float time, i
 
     float penger_walk_width = window_width + penger_drawn_width;
 
-    const SDL_Rect src_rect = {
-        (int) (penger_width / 2) * frame_index,
+    const SDL_FRect src_rect = {
+        (float)(penger_width / 2) * frame_index,
         0,
-        (int) penger_width / 2,
-        (int) penger_height
+        (float)penger_width / 2,
+        (float)penger_height
     };
 
-    SDL_Rect dst_rect = {
-        floorf((float)penger_walk_width * progress - penger_drawn_width),
-        window_height - (penger_height / PENGER_SCALE),
-        (int) (penger_width / 2) / PENGER_SCALE,
-        (int) penger_height / PENGER_SCALE
+    SDL_FRect dst_rect = {
+        (float)penger_walk_width * progress - penger_drawn_width,
+        (float)window_height - (penger_height / PENGER_SCALE),
+        (float)(penger_width / 2) / PENGER_SCALE,
+        (float)penger_height / PENGER_SCALE
     };
 
-    SDL_RenderCopyEx(renderer, penger, &src_rect, &dst_rect, 0, NULL, flipped);
+    SDL_RenderTextureRotated(renderer, penger, &src_rect, &dst_rect, 0, NULL, flipped);
 }
 #endif
 
-void initial_pen(SDL_Window *window, int *pen_x, int *pen_y, float user_scale, float *fit_scale)
+void initial_pen(SDL_Window *window, float *pen_x, float *pen_y, float user_scale, float *fit_scale)
 {
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
@@ -157,8 +154,8 @@ void initial_pen(SDL_Window *window, int *pen_x, int *pen_y, float user_scale, f
         *fit_scale = (float) h / (float) TEXT_HEIGHT;
     }
 
-    const int effective_digit_width = (int) floorf((float) CHAR_WIDTH * user_scale * *fit_scale);
-    const int effective_digit_height = (int) floorf((float) CHAR_HEIGHT * user_scale * *fit_scale);
+    const float effective_digit_width = (float) CHAR_WIDTH * user_scale * *fit_scale;
+    const float effective_digit_height = (float) CHAR_HEIGHT * user_scale * *fit_scale;
     *pen_x = w / 2 - effective_digit_width * CHARS_COUNT / 2;
     *pen_y = h / 2 - effective_digit_height / 2;
 }
@@ -240,14 +237,14 @@ int main(int argc, char **argv)
 {
     Mode mode = MODE_ASCENDING;
     float displayed_time = 0.0f;
-    int paused = 0;
-    int exit_after_countdown = 0;
+    bool paused = false;
+    bool exit_after_countdown = false;
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-p") == 0) {
-            paused = 1;
+            paused = true;
         } else if (strcmp(argv[i], "-e") == 0) {
-            exit_after_countdown = 1;
+            exit_after_countdown = true;
         } else if (strcmp(argv[i], "clock") == 0) {
             mode = MODE_CLOCK;
         } else {
@@ -261,16 +258,10 @@ int main(int argc, char **argv)
     SDL_Window *window =
         secp(SDL_CreateWindow(
                  "sowon",
-                 0, 0,
                  TEXT_WIDTH, TEXT_HEIGHT*2,
                  SDL_WINDOW_RESIZABLE));
 
-    SDL_Renderer *renderer =
-        secp(SDL_CreateRenderer(
-                 window, -1,
-                 SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED));
-
-    secc(SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear"));
+    SDL_Renderer *renderer = secp(SDL_CreateRenderer(window, NULL));
 
     SDL_Texture *digits = load_digits_png_file_as_texture(renderer);
 
@@ -286,7 +277,7 @@ int main(int argc, char **argv)
         secc(SDL_SetTextureColorMod(digits, MAIN_COLOR_R, MAIN_COLOR_G, MAIN_COLOR_B));
     }
 
-    int quit = 0;
+    bool quit = false;
     size_t wiggle_index = 0;
     float wiggle_cooldown = WIGGLE_DURATION;
     float user_scale = 1.0f;
@@ -298,12 +289,15 @@ int main(int argc, char **argv)
         SDL_Event event = {0};
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
-            case SDL_QUIT: {
-                quit = 1;
+            case SDL_EVENT_QUIT: {
+                quit = true;
             } break;
 
-            case SDL_KEYDOWN: {
-                switch (event.key.keysym.sym) {
+            case SDL_EVENT_KEY_DOWN: {
+                switch (event.key.key) {
+                case SDLK_ESCAPE: {
+                    quit = true;
+                } break;
                 case SDLK_SPACE: {
                     paused = !paused;
                     if (paused) {
@@ -330,10 +324,10 @@ int main(int argc, char **argv)
 
                 case SDLK_F5: {
                     displayed_time = 0.0f;
-                    paused = 0;
+                    paused = false;
                     for (int i = 1; i < argc; ++i) {
                         if (strcmp(argv[i], "-p") == 0) {
-                            paused = 1;
+                            paused = true;
                         } else {
                             displayed_time = parse_time(argv[i]);
                         }
@@ -346,19 +340,19 @@ int main(int argc, char **argv)
                 } break;
 
                 case SDLK_F11: {
-                    Uint32 window_flags;
+                    SDL_WindowFlags window_flags;
                     secc(window_flags = SDL_GetWindowFlags(window));
-                    if(window_flags & SDL_WINDOW_FULLSCREEN_DESKTOP) {
-                        secc(SDL_SetWindowFullscreen(window, 0));
+                    if(window_flags & SDL_WINDOW_FULLSCREEN) {
+                        secc(SDL_SetWindowFullscreen(window, false));
                     } else {
-                        secc(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP));
+                        secc(SDL_SetWindowFullscreen(window, true));
                     }
                 } break;
                 }
             } break;
 
-            case SDL_MOUSEWHEEL: {
-                if (SDL_GetModState() & KMOD_CTRL) {
+            case SDL_EVENT_MOUSE_WHEEL: {
+                if (SDL_GetModState() & SDL_KMOD_CTRL) {
                     if (event.wheel.y > 0) {
                         user_scale += SCALE_FACTOR * user_scale;
                     } else if (event.wheel.y < 0) {
@@ -386,7 +380,7 @@ int main(int argc, char **argv)
             // PENGER END //////////////////////////////
 
             // DIGITS BEGIN //////////////////////////////
-            int pen_x, pen_y;
+            float pen_x, pen_y;
             float fit_scale = 1.0;
             initial_pen(window, &pen_x, &pen_y, user_scale, &fit_scale);
 

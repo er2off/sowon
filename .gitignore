@@ -4,7 +4,7 @@ digits.h
 penger_walk_sheet.h
 *.kra
 *~
-SDL2
+SDL3
 *.obj
 *.exe
 .dSYM/

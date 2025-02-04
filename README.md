@@ -6,18 +6,18 @@
 
 ## Build
 
-Dependencies: [SDL2](https://www.libsdl.org/download-2.0.php)
+Dependencies: [SDL3](https://github.com/libsdl-org/SDL/releases/tag/release-3.2.0)
 
 ### Debian
 ```console
-$ sudo apt-get install libsdl2-dev
+$ sudo apt-get install libsdl3-dev
 $ make
 ```
 
 ### MacOS
 
 ```console
-$ brew install sdl2 pkg-config
+$ brew install sdl3 pkg-config
 $ make
 ```
 
@@ -27,13 +27,13 @@ $ make
 
 - Enter the Visual Studio Command Line Development Environment https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line
   - Basically just find `vcvarsall.bat` and run `vcvarsall.bat x64` inside of cmd
-- Download [SDL2 VC Development Libraries](https://libsdl.org/release/SDL2-devel-2.0.12-VC.zip) and copy it to `path\to\sowon`
+- Download [SDL3 VC Development Libraries](https://github.com/libsdl-org/SDL/releases/download/release-3.2.0/SDL3-devel-3.2.0-VC.zip) and copy it to `path\to\sowon`
 
 ```console
 > cd path\to\sowon
-> tar -xf SDL2-devel-2.0.12-VC.zip
-> move SDL2-2.0.12 SDL2
-> del SDL2-devel-2.0.12-VC.zip
+> tar -xf SDL3-devel-3.2.0-VC.zip
+> move SDL3-3.2.0 SDL3
+> del SDL3-devel-3.2.0-VC.zip
 > build_msvc
 ```
 
@@ -54,6 +54,7 @@ $ make
 
 | Key | Description |
 | --- | --- |
+| <kbd>ESC</kbd> | Quit |
 | <kbd>SPACE</kbd> | Toggle pause |
 | <kbd>=</kbd> | Zoom in |
 | <kbd>-</kbd> | Zoom out |

@@ -2,70 +2,72 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build-linux-gcc:
-    runs-on: ubuntu-18.04
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+        penger: ["", "PENGER=1"]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -qq libsdl2-dev
+          sudo apt-get install -qq libsdl3-dev
       - name: build sowon
         run: |
-          make
+          make ${{ matrix.penger }}
         env:
-          CC: gcc
-  build-linux-clang:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v1
-      - name: install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -qq libsdl2-dev
-      - name: build sowon
-        run: |
-          make
-        env:
-          CC: clang
+          CC: ${{ matrix.compiler }}
+
   build-macos:
-    runs-on: macOS-latest
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        penger: ["", "PENGER=1"]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: install dependencies
-        run: brew install sdl2 pkg-config
+        run: brew install sdl3 pkg-config
       - name: build sowon
         run: |
-          make
+          make ${{ matrix.penger }}
         env:
           CC: clang
+
   build-windows-msvc:
-    runs-on: windows-2019
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        penger: ["", "PENGER"]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
         # this runs vcvarsall for us, so we get the MSVC toolchain in PATH.
       - uses: seanmiddleditch/gha-setup-vsdevenv@master
-      - name: download sdl2
+      - name: download sdl3
         run: |
-          curl -fsSL -o SDL2-devel-2.0.12-VC.zip https://www.libsdl.org/release/SDL2-devel-2.0.12-VC.zip
-          tar -xf SDL2-devel-2.0.12-VC.zip
-          mv SDL2-2.0.12 SDL2
+          curl -fsSL -o SDL3-devel-3.2.0-VC.zip https://github.com/libsdl-org/SDL/releases/download/release-3.2.0/SDL3-devel-3.2.0-VC.zip
+          tar -xf SDL3-devel-3.2.0-VC.zip
+          mv SDL3-3.2.0 SDL3
       - name: build sowon
         shell: cmd
         run: |
-          ./build_msvc.bat
-# TODO: FreeBSD build is broken
-#  build-freebsd:
-#    runs-on: macos-latest
-#    name: FreeBSD LLVM Clang build
-#    steps:
-#      - uses: actions/checkout@v2
-#      - name: Build on FreeBSD
-#        id: build
-#        uses: vmactions/freebsd-vm@v0.0.9
-#        with:
-#          usesh: true
-#          prepare: pkg install -y sdl2 pkgconf
-#          run: |
-#            freebsd-version
-#            make
+          build_msvc.bat ${{ matrix.penger }}
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    name: FreeBSD LLVM Clang build
+    strategy:
+      matrix:
+        penger: ["", "PENGER=1"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build on FreeBSD
+        id: build
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg install -y sdl3 pkgconf
+          run: |
+            freebsd-version
+            make ${{ matrix.penger }}
